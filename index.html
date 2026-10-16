@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Futbolitos - IPTV Org</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0d1117;
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 { text-align: center; color: #58a6ff; }
+    #search {
+      width: 100%;
+      max-width: 500px;
+      padding: 10px;
+      margin: 10px auto 20px auto;
+      display: block;
+      border-radius: 6px;
+      border: 1px solid #30363d;
+      background: #161b22;
+      color: #fff;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 15px;
+    }
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .card:hover { transform: scale(1.03); border-color: #58a6ff; }
+    .card img { max-width: 80px; max-height: 50px; object-fit: contain; margin-bottom: 8px; }
+    .card p { margin: 0; font-size: 14px; font-weight: bold; }
+    #player-container {
+      margin-bottom: 25px;
+      text-align: center;
+    }
+    video { width: 100%; max-width: 800px; border-radius: 8px; background: #000; }
+  </style>
+</head>
+<body>
+
+  <h1>⚽ Futbolitos IPTV</h1>
+
+  <div id="player-container">
+    <video id="video" controls autoplay></video>
+  </div>
+
+  <input type="text" id="search" placeholder="Buscar canal (ej. ESPN)...">
+
+  <div id="channels-grid" class="grid">
+    <p>Cargando lista de IPTV-Org...</p>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
