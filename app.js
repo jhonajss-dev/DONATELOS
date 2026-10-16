@@ -10,9 +10,8 @@ async function loadChannels() {
     const text = await response.text();
     channels = parseM3U(text);
     
-    // Filtrar por defecto canales de ESPN o deportes
-    const defaultChannels = channels.filter(c => c.name.toLowerCase().includes("espn"));
-    renderChannels(defaultChannels.length > 0 ? defaultChannels : channels.slice(0, 50));
+    // Muestra los primeros 100 canales de la lista global sin filtrar
+    renderChannels(channels.slice(0, 100));
   } catch (error) {
     grid.innerHTML = "<p>Error al cargar la lista de IPTV-Org.</p>";
   }
@@ -69,10 +68,11 @@ function playStream(url) {
   }
 }
 
+// Búsqueda en la lista completa de todos los canales
 searchInput.addEventListener("input", (e) => {
   const query = e.target.value.toLowerCase();
   const filtered = channels.filter(c => c.name.toLowerCase().includes(query));
-  renderChannels(filtered.slice(0, 60)); // Limitar a 60 resultados para fluidez
+  renderChannels(filtered.slice(0, 100)); // Muestra hasta 100 resultados de la búsqueda
 });
 
 loadChannels();
