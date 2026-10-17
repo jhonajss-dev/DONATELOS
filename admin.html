@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Donatelos TV - Panel de Administración</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { background: #030712; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; flex-direction: column; padding: 20px; box-sizing: border-box; }
+    .card { background: #111827; border: 1px solid #1f2937; padding: 30px; border-radius: 12px; width: 450px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); margin-bottom: 20px; }
+    input, textarea { width: 100%; padding: 10px; margin-bottom: 12px; background: #030712; border: 1px solid #374151; border-radius: 6px; color: white; box-sizing: border-box; font-size: 0.9rem; }
+    button { width: 100%; padding: 10px; background: #ef4444; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; font-size: 0.9rem; }
+    button:hover { background: #dc2626; }
+    .hidden { display: none; }
+    .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .logout-btn { background: #374151; width: auto; padding: 6px 12px; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+
+  <!-- Vista 1: Login de Administrador -->
+  <div id="login-section" class="card">
+    <h2 style="margin-top: 0; font-size: 1.2rem; margin-bottom: 20px; text-align: center;">🔒 Acceso de Administrador</h2>
+    <input type="email" id="admin-email" placeholder="Correo electrónico">
+    <input type="password" id="admin-password" placeholder="Contraseña">
+    <button onclick="loginAdmin()">Iniciar Sesión</button>
+    <br><br>
+    <a href="index.html" style="color: #9ca3af; font-size: 0.8rem; text-decoration: none; display: block; text-align: center;">← Volver al inicio</a>
+  </div>
+
+  <!-- Vista 2: Panel de Control (Oculto hasta autenticarse) -->
+  <div id="admin-panel" class="card hidden">
+    <div class="header-flex">
+      <h3 style="margin: 0; font-size: 1rem; color: #ef4444;">⚙️ Panel Profesional</h3>
+      <button class="logout-btn" onclick="logoutAdmin()">Cerrar Sesión</button>
+    </div>
+
+    <!-- Agregar Canal Personalizado (Individual) -->
+    <div style="margin-bottom: 20px;">
+      <label style="font-size: 0.85rem; font-weight: bold; color: #d1d5db; display: block; margin-bottom: 6px;">➕ Agregar Canal Personalizado (Individual)</label>
+      <input type="text" id="custom-name" placeholder="Nombre del Canal (Ej. Willax TV)">
+      <input type="text" id="custom-logo" placeholder="URL del Logo (Opcional)">
+      <textarea id="custom-url" placeholder="Pega aquí el enlace (.m3u8)" style="height: 70px; resize: none;"></textarea>
+      <button onclick="saveChannel()">Guardar Canal Individual</button>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid #1f2937; margin: 15px 0;">
+
+    <!-- Gestionar / Borrar Canales Existentes -->
+    <div style="margin-bottom: 20px;">
+      <label style="font-size: 0.85rem; font-weight: bold; color: #d1d5db; display: block; margin-bottom: 6px;">🗑️ Gestionar Canales Existentes</label>
+      <div id="admin-channels-list" style="max-height: 150px; overflow-y: auto; background: #030712; border: 1px solid #374151; border-radius: 6px; padding: 8px;">
+        <p style="color: #9ca3af; font-size: 0.8rem; text-align: center; margin: 5px 0;">Inicia sesión para ver los canales</p>
+      </div>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid #1f2937; margin: 15px 0;">
+
+    <!-- Enviar Anuncio Global -->
+    <div>
+      <label style="font-size: 0.85rem; font-weight: bold; color: #d1d5db; display: block; margin-bottom: 6px;">📢 Enviar Anuncio al Chat Global</label>
+      <input type="text" id="admin-msg" placeholder="Escribe un anuncio importante...">
+      <button onclick="sendAnnouncement()" style="background: #3b82f6;">Enviar Anuncio</button>
+    </div>
+    
+    <br>
+    <a href="index.html" style="color: #9ca3af; font-size: 0.8rem; text-decoration: none; display: block; text-align: center;">Ir a la plataforma de TV →</a>
+  </div>
+
+  <script src="admin.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
