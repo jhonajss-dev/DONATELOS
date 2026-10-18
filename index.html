@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Donatelos TV • En Vivo</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    :root {
+      --bg-dark: #0a0a0f;
+      --panel-dark: rgba(15, 18, 25, 0.75);
+      --card-bg: rgba(255, 255, 255, 0.03);
+      --accent-orange: #f97316;
+      --accent-hover: #fb923c;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --glass-blur: blur(20px);
+    }
+
+    * { box-sizing: border-box; }
+
+    /* Ajuste para que el video se ponga en horizontal automáticamente en teléfonos */
+    @media screen and (orientation: landscape) and (max-width: 900px) {
+      html, body {
+        overflow: hidden !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      .hero-player {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 999999 !important;
+        background: #000 !important;
+        margin: 0 !important;
+      }
+
+      .hero-player video {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: contain !important;
+      }
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(124, 58, 237, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(249, 115, 22, 0.06) 0%, transparent 40%);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    /* Navbar Liquid Glass */
+    nav {
+      background: rgba(10, 10, 15, 0.85);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-text {
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: 0.5px;
+      color: #ffffff;
+    }
+
+    .nav-logo {
+      height: 32px;
+      width: auto;
+      object-fit: contain;
+    }
+
+    /* Barra de Anuncios */
+    .announcement-bar {
+      width: 100%;
+      background: rgba(15, 18, 25, 0.75);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-bottom: 1px solid var(--border-color);
+      overflow: hidden;
+      padding: 10px 20px;
+      white-space: nowrap;
+      position: relative;
+    }
+
+    .announcement-track {
+      display: inline-flex;
+      align-items: center;
+      gap: 20px;
+      animation: scrollMarquee 28s linear infinite;
+    }
+
+    .announcement-track:hover {
+      animation-play-state: paused;
+    }
+
+    @keyframes scrollMarquee {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    /* Contenido Principal */
+    .main-wrapper {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    /* Banner Principal / Reproductor Liquid Glass */
+    .hero-banner {
+      background: linear-gradient(135deg, rgba(20, 20, 30, 0.6) 0%, rgba(35, 25, 45, 0.4) 100%);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 28px;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 24px;
+      align-items: start;
+      margin-bottom: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .hero-text h2 {
+      font-size: 24px;
+      margin: 0 0 6px 0;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .hero-text p {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-bottom: 14px;
+      line-height: 1.4;
+    }
+
+    .hero-player {
+      width: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #000;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      position: relative;
+    }
+
+    video {
+      width: 100%;
+      height: 320px;
+      display: block;
+      object-fit: contain;
+    }
+
+    .player-controls {
+      background: rgba(15, 18, 25, 0.5);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 12px;
+      border-radius: 16px;
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-control {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      color: white;
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: all 0.2s ease;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-control:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .volume-slider {
+      width: 80px;
+      accent-color: var(--accent-orange);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    /* Servidores */
+    .server-options-bar {
+      display: flex;
+      gap: 6px;
+      margin-top: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .server-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-right: 4px;
+      font-weight: 600;
+    }
+
+    .btn-server {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-server:hover, .btn-server.active {
+      background: var(--accent-orange);
+      border-color: var(--accent-orange);
+      color: white;
+      box-shadow: 0 0 15px rgba(249, 115, 22, 0.3);
+    }
+
+    /* Columna Derecha: Chat y Canales */
+    .chat-column {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .glass-panel {
+      background: rgba(15, 18, 25, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 14px;
+      color: white;
+    }
+
+    /* Chat Elements */
+    #chat-messages {
+      height: 150px;
+      overflow-y: auto;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .chat-input {
+      width: 100%;
+      padding: 8px 12px;
+      background: rgba(3, 7, 18, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: white;
+      font-size: 0.8rem;
+      outline: none;
+    }
+
+    .chat-input:focus {
+      border-color: var(--accent-orange);
+    }
+
+    /* Grilla de Canales principal */
+    .country-filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+    }
+
+    .country-btn {
+      background: rgba(20, 20, 30, 0.6);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 9999px;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .country-btn:hover {
+      border-color: var(--accent-orange);
+      color: white;
+      background: rgba(249, 115, 22, 0.1);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .search-input {
+      background: rgba(15, 15, 25, 0.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-color);
+      color: white;
+      padding: 10px 18px;
+      border-radius: 9999px;
+      font-size: 14px;
+      width: 100%;
+      max-width: 300px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-orange);
+      box-shadow: 0 0 15px rgba(249, 115, 22, 0.2);
+    }
+
+    .grid-channels {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    .channel-card {
+      background: rgba(255, 255, 255, 0.02);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 16px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      position: relative;
+    }
+
+    .channel-card:hover, .channel-card:focus {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+      border-color: rgba(249, 115, 22, 0.4);
+      background: rgba(255, 255, 255, 0.04);
+      outline: none;
+    }
+
+    .card-thumb {
+      width: 100%;
+      height: 110px;
+      background: rgba(0,0,0,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      position: relative;
+    }
+
+    .card-thumb img {
+      max-width: 85%;
+      max-height: 85px;
+      object-fit: contain;
+    }
+
+    .card-body {
+      padding: 12px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin: 0 0 4px 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Estilo para los elementos de la mini lista lateral de canales */
+    .side-channel-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      padding: 8px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .side-channel-item:hover {
+      border-color: var(--accent-orange);
+      background: rgba(249, 115, 22, 0.1);
+    }
+
+    .side-channel-item img {
+      width: 32px;
+      height: 32px;
+      object-fit: contain;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    /* Enfoque para Android TV / Control Remoto */
+    button:focus, a:focus, .channel-item:focus, .side-channel-item:focus, [tabindex="0"]:focus {
+      outline: 3px solid var(--accent-orange) !important;
+      outline-offset: 2px !important;
+      transform: scale(1.02);
+    }
+
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding: 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-top: 40px;
+      background: rgba(10, 10, 15, 0.4);
+      backdrop-filter: blur(10px);
+    }
+
+    @media (max-width: 900px) {
+      nav { padding: 12px 16px; }
+      .main-wrapper { padding: 16px; }
+      .hero-banner { grid-template-columns: 1fr; padding: 16px; gap: 16px; }
+      video { height: 220px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. Barra de navegación superior -->
+  <nav>
+    <div class="logo-container">
+      <img src="logo.png" alt="Donatelos TV" class="nav-logo" onerror="this.onerror=null; this.src='logo.jpg';">
+      <span class="logo-text">DONATELOS TV</span>
+    </div>
+  </nav>
+
+  <!-- 2. Franja de anuncios con marquesina -->
+  <div class="announcement-bar">
+    <div class="announcement-track" id="dynamic-announcement-track">
+      <!-- JavaScript llena esto automáticamente -->
+    </div>
+  </div>
+
+  <div class="main-wrapper">
+    <div class="hero-banner">
+      
+      <!-- Columna Izquierda: Reproductor y Controles -->
+      <div class="hero-text">
+        <h2 id="current-channel-title">Tu señal en la pantalla</h2>
+        <p>Disfruta de tus eventos deportivos y películas en vivo desde cualquier dispositivo con Donatelos TV.</p>
+
+        <div class="hero-player">
+          <video id="video" controls playsinline webkit-playsinline></video>
+        </div>
+
+        <div class="player-controls">
+          <button class="btn-control" onclick="togglePip()">📺 PiP</button>
+          <button class="btn-control" onclick="toggleFullScreen()">⤢ Pantalla Completa</button>
+          <button class="btn-control" id="mute-btn" onclick="toggleMute()">🔊</button>
+          <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.05" oninput="changeVolume(this.value)">
+        </div>
+
+        <!-- Opciones de Servidor / Fuentes Alternativas -->
+        <div class="server-options-bar" id="server-options-container" style="display: none;">
+          <span class="server-label">Servidores:</span>
+          <button class="btn-server active" onclick="switchServer(1)">Opción 1 (Directa)</button>
+          <button class="btn-server" onclick="switchServer(2)">Opción 2 (Proxy)</button>
+        </div>
+      </div>
+
+      <!-- Columna Derecha: Chat y Canales -->
+      <div class="chat-column">
+        
+        <!-- Botones de WhatsApp y Compartir -->
+        <div style="display: flex; gap: 8px;">
+          <a href="https://chat.whatsapp.com/EIHBTLXxhTW8l7COAQPyPI" target="_blank" style="flex: 1; padding: 10px; background: #25d366; color: white; text-align: center; text-decoration: none; border-radius: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.8rem;">
+            💬 Grupo WhatsApp
+          </a>
+          <button id="btn-share" type="button" style="flex: 1; padding: 10px; background: #128c7e; color: white; text-align: center; border: none; border-radius: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.8rem; cursor: pointer;">
+            📲 Compartir
+          </button>
+        </div>
+
+        <!-- Contenedor del Chat -->
+        <div class="glass-panel">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <h3 style="margin: 0; font-size: 0.95rem; font-weight: 600;">💬 Chat en Vivo</h3>
+            <span style="color: #34d399; font-size: 0.75rem; font-weight: bold; display: flex; align-items: center; gap: 4px;">● En vivo</span>
+          </div>
+          
+          <p style="color: var(--text-muted); font-size: 0.75rem; margin: 0 0 10px 0;">
+            Comparte el partido con la comunidad con respeto.
+          </p>
+
+          <div id="chat-messages">
+            <div style="font-size: 0.8rem;">
+              <strong style="color: #34d399;">Anthonix · Perú</strong> <span style="color: #6b7280; font-size: 0.7rem;">18:27</span>
+              <div style="margin-top: 2px; color: #ffffff;">🟢 Se ve fluido</div>
+            </div>
+          </div>
+
+          <div class="chat-input-row">
+            <input type="text" id="chat-nickname" placeholder="Tu apodo" class="chat-input">
+            <select id="chat-country" class="chat-input">
+              <option value="Perú">🇵🇪 Perú</option>
+              <option value="México">🇲🇽 México</option>
+              <option value="Argentina">🇦🇷 Argentina</option>
+              <option value="España">🇪🇸 España</option>
+              <option value="Colombia">🇨🇴 Colombia</option>
+            </select>
+          </div>
+
+          <div class="chat-input-row" style="margin-bottom: 8px;">
+            <input type="text" id="chat-text" placeholder="Escribe tu mensaje..." class="chat-input" style="flex: 1;">
+            <button onclick="sendChatMessage()" style="padding: 8px 14px; background: #25d366; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">
+              Enviar
+            </button>
+          </div>
+
+          <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+            <button onclick="sendQuickStatus('🟢 Se ve fluido')" class="btn-control" style="padding: 4px 8px; font-size: 0.7rem;">🟢 Fluido</button>
+            <button onclick="sendQuickStatus('⚠️ Se cortó')" class="btn-control" style="padding: 4px 8px; font-size: 0.7rem;">⚠️ Se cortó</button>
+            <button onclick="sendQuickStatus('⚽ ¡GOOOL!')" class="btn-control" style="padding: 4px 8px; font-size: 0.7rem;">⚽ ¡GOOOL!</button>
+          </div>
+        </div>
+
+        <!-- Mini Lista de Canales lateral -->
+        <div class="glass-panel">
+          <h4 style="margin: 0 0 10px 0; font-size: 0.85rem; color: var(--accent-orange); font-weight: bold;">
+            📺 Canales Disponibles
+          </h4>
+          <div id="sidebar-channels-grid" style="max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;">
+            <p style="color: var(--text-muted); font-size: 0.75rem; text-align: center; margin: 10px 0;">Cargando lista...</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Filtros por país -->
+    <div class="country-filters">
+      <button class="country-btn" onclick="filterByKeyword('pe')">🇵🇪 Perú</button>
+      <button class="country-btn" onclick="filterByKeyword('mx')">🇲🇽 México</button>
+      <button class="country-btn" onclick="filterByKeyword('ar')">🇦🇷 Argentina</button>
+      <button class="country-btn" onclick="filterByKeyword('es')">🇪🇸 España</button>
+      <button class="country-btn" onclick="filterByKeyword('co')">🇨🇴 Colombia</button>
+      <button class="country-btn" onclick="renderChannels(channels.slice(0, 100))">🌐 Todos</button>
+    </div>
+
+    <div class="section-header">
+      <h3 class="section-title" id="section-heading">Transmisiones Disponibles</h3>
+      <input type="text" id="search" class="search-input" placeholder="Buscar canal...">
+    </div>
+
+    <!-- Grilla principal de canales -->
+    <div id="channels-grid" class="grid-channels">
+      <div class="loading-text">Cargando canales...</div>
+    </div>
+  </div>
+
+  <footer>
+    Donatelos TV © 2026. Todos los derechos reservados.
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js?v=2"></script>
+</body>
+</html>
