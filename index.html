@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Donatelos TV • En Vivo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    :root { --bg:#0E0F14; --surface:#171923; --surface-2:#12141B; --border:#262A36; --text:#F2F3F7; --muted:#A3A9B8;
+      --live:#D92D12; --accent:#FF6B4D; --pad:48px; --card:260px; }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+      font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; }
+    body.no-scroll { overflow:hidden; }
+    button, input { font-family:inherit; }
+    a { color:inherit; }
+    :focus-visible { outline:3px solid #fff; outline-offset:3px; }
+
+    /* ---- Landscape móvil: video a pantalla completa ---- */
+    @media screen and (orientation:landscape) and (max-width:900px) {
+      html, body { overflow:hidden !important; width:100vw !important; height:100vh !important; margin:0 !important; padding:0 !important; }
+      .hero-player { position:fixed !important; inset:0 !important; width:100vw !important; height:100vh !important; z-index:999999 !important; background:#000 !important; margin:0 !important; border-radius:0 !important; }
+      .hero-player video { width:100% !important; height:100% !important; object-fit:contain !important; }
+    }
+
+    /* ---- Encabezado ---- */
+    .top { position:sticky; top:0; z-index:100; display:flex; align-items:center; gap:24px; padding:14px var(--pad); background:rgba(14,15,20,.88); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
+    .brand { display:flex; align-items:center; gap:10px; background:none; border:0; color:var(--text); cursor:pointer; padding:0; }
+    .nav-logo { height:34px; width:auto; border-radius:8px; object-fit:contain; }
+    .logo-text { font-weight:800; font-size:17px; letter-spacing:.02em; }
+    .nav { display:flex; gap:6px; }
+    .nav button { min-height:40px; padding:0 16px; border-radius:10px; border:0; background:transparent; color:var(--text); font-size:15px; font-weight:500; cursor:pointer; }
+    .nav button.active { background:rgba(255,255,255,.14); font-weight:800; }
+    .top-right { margin-left:auto; display:flex; align-items:center; gap:10px; }
+    .icon-btn { width:44px; height:44px; border-radius:50%; border:0; background:transparent; color:var(--text); display:flex; align-items:center; justify-content:center; cursor:pointer; }
+    .wa { display:inline-flex; align-items:center; min-height:40px; padding:0 16px; border-radius:10px; background:#22C55E; color:#04210F; font-weight:800; font-size:14px; text-decoration:none; }
+
+    .announcement-bar { overflow:hidden; white-space:nowrap; padding:8px 0; background:var(--surface-2); border-bottom:1px solid var(--border); }
+    .announcement-track { display:inline-flex; gap:64px; padding-left:var(--pad); font-size:13px; font-weight:700; color:#FFB4A3; animation:scrollMarquee 32s linear infinite; }
+    @keyframes scrollMarquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+    @media (prefers-reduced-motion:reduce) { .announcement-track { animation:none; } }
+
+    /* ---- Búsqueda ---- */
+    #search-bar { display:none; padding:20px var(--pad) 0; }
+    #search-bar.show { display:block; }
+    .search-input { width:100%; max-width:640px; min-height:48px; padding:0 18px; border-radius:12px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:15px; outline:none; }
+    .search-input:focus { border-color:var(--accent); }
+
+    /* ---- Banner ---- */
+    .hero { position:relative; min-height:clamp(400px,58vh,560px); display:flex; align-items:flex-end; padding:0 var(--pad) 56px; overflow:hidden;
+      background:hsl(var(--h),30%,18%); background:linear-gradient(135deg,hsl(var(--h),38%,24%),hsl(calc(var(--h) + 40),42%,12%)); margin-top:-68px; padding-top:68px; }
+    .hero::before { content:""; position:absolute; inset:0; background:linear-gradient(90deg,#0E0F14 0%,rgba(14,15,20,.88) 34%,rgba(14,15,20,0) 72%),linear-gradient(0deg,#0E0F14 0%,rgba(14,15,20,0) 30%); }
+    .hero-tile { position:absolute; right:12%; top:50%; transform:translateY(-50%); width:clamp(140px,22vw,280px); aspect-ratio:1; background:#fff; border-radius:24px; padding:6%; display:flex; align-items:center; justify-content:center; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+    .hero-tile img { max-width:100%; max-height:100%; object-fit:contain; }
+    .hero-copy { position:relative; max-width:560px; }
+    .eyebrow { font-size:13px; font-weight:800; letter-spacing:.08em; color:#FF8A70; }
+    .hero h1 { margin:6px 0 0; font-size:clamp(30px,5vw,56px); font-weight:800; line-height:1.03; letter-spacing:-.02em; }
+    .hero p { margin:12px 0 0; color:#C9CEDA; font-size:16px; }
+    .hero-actions { display:flex; align-items:center; gap:12px; margin-top:22px; }
+    .cta { min-height:52px; padding:0 26px; border-radius:10px; border:0; background:var(--text); color:var(--bg); font-weight:800; font-size:16px; display:flex; align-items:center; gap:10px; cursor:pointer; }
+    .circ { width:52px; height:52px; border-radius:50%; border:0; background:rgba(255,255,255,.16); color:var(--text); display:flex; align-items:center; justify-content:center; cursor:pointer; }
+    .dots { position:absolute; left:50%; bottom:14px; transform:translateX(-50%); display:flex; }
+    .dot { width:22px; height:22px; border:0; padding:0; background:transparent; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+    .dot::after { content:""; width:6px; height:6px; border-radius:50%; background:#6B7285; }
+    .dot.on::after { width:20px; border-radius:3px; background:var(--text); }
+
+    /* ---- Filas y tarjetas ---- */
+    .sec { padding:0 var(--pad) 28px; }
+    .sec.first { padding-top:24px; }
+    .sec h2 { margin:0 0 12px; font-size:20px; font-weight:800; }
+    .row { display:flex; gap:12px; overflow-x:auto; scrollbar-width:none; scroll-snap-type:x proximity; padding:4px 0; }
+    .row::-webkit-scrollbar { display:none; }
+    .sec > .row { margin-right:calc(var(--pad) * -1); padding-right:var(--pad); scroll-padding-left:var(--pad); }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(var(--card),1fr)); gap:12px; }
+    .card { flex:none; width:var(--card); aspect-ratio:16/9; position:relative; overflow:hidden; border:0; border-radius:10px; cursor:pointer; text-align:left; color:var(--text); scroll-snap-align:start;
+      background:hsl(var(--h),30%,18%); background:linear-gradient(135deg,hsl(var(--h),32%,24%),hsl(calc(var(--h) + 30),38%,12%)); transition:transform .15s; }
+    .grid .card { width:auto; }
+    .card:hover, .card:focus-visible { transform:scale(1.04); }
+    .card .live { position:absolute; top:8px; left:8px; background:var(--live); color:#fff; font-size:10px; font-weight:800; letter-spacing:.05em; padding:2px 7px; border-radius:5px; }
+    .card .tile { position:absolute; left:50%; top:44%; transform:translate(-50%,-50%); height:54%; aspect-ratio:1; background:#fff; border-radius:10px; padding:5%; display:flex; align-items:center; justify-content:center; }
+    .tile img { max-width:100%; max-height:100%; object-fit:contain; }
+    .card .nm { position:absolute; left:10px; right:10px; bottom:8px; font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .loading-text { color:var(--muted); font-size:14px; padding:24px var(--pad); margin:0; }
+    #channels-grid { min-height:60vh; }
+
+    /* ---- Reproductor ---- */
+    #player-view { display:none; position:fixed; inset:0; z-index:200; background:var(--bg); overflow-y:auto; }
+    #player-view.open { display:block; }
+    .pv-top { display:flex; align-items:center; flex-wrap:wrap; gap:10px; padding:calc(12px + env(safe-area-inset-top)) var(--pad) 12px; }
+    .pv-top h2 { margin:0; font-size:20px; font-weight:800; flex:1; min-width:140px; }
+    .chip { background:var(--live); color:#fff; font-size:12px; font-weight:800; letter-spacing:.06em; padding:4px 10px; border-radius:6px; }
+    .btn { min-height:44px; padding:0 16px; border-radius:12px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-weight:700; font-size:14px; cursor:pointer; }
+    .pv-body { max-width:1200px; margin:0 auto; }
+    .hero-player { position:relative; aspect-ratio:16/9; background:#000; overflow:hidden; border-radius:14px; margin:0 var(--pad); }
+    video { width:100%; height:100%; display:block; object-fit:contain; }
+    .pv-controls { display:flex; gap:10px; flex-wrap:wrap; padding:14px var(--pad) 24px; }
+    .pv-more { padding-left:0; padding-right:0; }
+    .pv-more h2, .pv-more .row { padding-left:var(--pad); padding-right:var(--pad); }
+    .pv-more .row { margin-right:0; }
+    html.tv .pv-more .row { padding:14px var(--pad); }
+
+    /* ---- Navegación inferior (móvil) ---- */
+    .bottom-nav { display:none; }
+    footer { padding:24px var(--pad); text-align:center; color:var(--muted); font-size:13px; border-top:1px solid var(--border); }
+
+    @media (max-width:900px) {
+      :root { --pad:16px; --card:168px; }
+      body { -webkit-tap-highlight-color:transparent; overscroll-behavior-y:none; padding-bottom:calc(76px + env(safe-area-inset-bottom)); }
+      .top { padding-top:calc(12px + env(safe-area-inset-top)); gap:8px; }
+      .nav { display:none; }
+      .logo-text { font-size:15px; }
+      .nav-logo { height:30px; }
+      .hero { min-height:440px; margin-top:-62px; padding-top:62px; padding-bottom:44px; }
+      .hero::before { background:linear-gradient(0deg,#0E0F14 0%,rgba(14,15,20,.6) 45%,rgba(14,15,20,0) 80%); }
+      .hero-tile { right:auto; left:50%; top:36%; transform:translate(-50%,-50%); width:140px; }
+      .hero-actions .cta { flex:1; justify-content:center; }
+      .hero-player { margin:0; border-radius:0; }
+      .bottom-nav { display:flex; position:fixed; left:0; right:0; bottom:0; z-index:150; border-top:1px solid var(--border); background:var(--surface-2); padding:4px 8px calc(8px + env(safe-area-inset-bottom)); }
+      .bottom-nav button { flex:1; min-height:56px; border:0; background:transparent; color:var(--muted); font-size:11px; font-weight:700; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; }
+      .bottom-nav button.active { color:var(--accent); }
+    }
+
+    /* ================= MODO TV (control remoto) ================= */
+    html.tv { --pad:72px; --card:300px; }
+    html.tv .wa, html.tv #btn-share, html.tv .pv-controls, html.tv .bottom-nav { display:none !important; }
+    html.tv .top { gap:32px; padding-top:28px; }
+    html.tv .nav button, html.tv .icon-btn, html.tv .btn { min-height:48px; }
+    html.tv .row { padding:14px 6px; }
+    html.tv .card:focus-visible { outline:4px solid #fff; outline-offset:4px; transform:scale(1.07); z-index:2; }
+    html.tv .nav button:focus-visible, html.tv .btn:focus-visible, html.tv .cta:focus-visible, html.tv .circ:focus-visible, html.tv .icon-btn:focus-visible { outline:4px solid #fff; outline-offset:3px; }
+    html.tv .hero { min-height:calc(54vh / var(--z, 1)); padding-bottom:40px; }
+    html.tv #player-view.open { background:#000; overflow:hidden; }
+    html.tv .pv-body { max-width:none; }
+    html.tv .pv-body .hero-player { position:fixed; inset:0; margin:0; border-radius:0; aspect-ratio:auto; z-index:1; }
+    html.tv .pv-top { position:fixed; top:0; left:0; right:0; z-index:5; padding-top:32px; background:linear-gradient(rgba(0,0,0,.85),rgba(0,0,0,0)); transition:opacity .3s; }
+    html.tv .pv-more { position:fixed; left:0; right:0; bottom:0; z-index:5; padding:48px 0 20px; background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.9)); transition:opacity .3s; }
+    html.tv #player-view.idle .pv-top, html.tv #player-view.idle .pv-more { opacity:0; pointer-events:none; }
+
+    /* Controles nativos / Smart TV */
+    .hero-player.fullscreen-hide-controls::-webkit-media-controls { opacity:0 !important; transition:opacity .3s ease !important; pointer-events:none !important; }
+    .hero-player.show-controls::-webkit-media-controls, .hero-player.show-controls video::-webkit-media-controls { display:flex !important; opacity:1 !important; pointer-events:auto !important; }
+    .hero-player.is-tv video::-webkit-media-controls-panel,
+    .hero-player.is-tv video::-webkit-media-controls-play-button,
+    .hero-player.is-tv video::-webkit-media-controls-start-playback-button { display:none !important; }
+  </style>
+</head>
+<body>
+
+  <header class="top">
+    <button class="brand" data-view="home" aria-label="Ir al inicio">
+      <img src="logo.png" alt="" class="nav-logo" onerror="this.onerror=null; this.src='logo.jpg';">
+      <span class="logo-text">DONATELOS TV</span>
+    </button>
+    <nav class="nav" aria-label="Secciones">
+      <button data-view="home" class="active">Inicio</button>
+      <button data-view="live">En vivo</button>
+      <button data-view="movies">Películas</button>
+      <button data-view="sports">Deportes</button>
+    </nav>
+    <div class="top-right">
+      <button class="icon-btn" data-view="search" aria-label="Buscar canales"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button>
+      <a class="wa" href="https://chat.whatsapp.com/EIHBTLXxhTW8l7COAQPyPI" target="_blank" rel="noopener">WhatsApp</a>
+    </div>
+  </header>
+
+  <div class="announcement-bar">
+    <div class="announcement-track" id="dynamic-announcement-track">
+      <span>BIENVENIDOS A DONATELOS TV - DISFRUTA DE TU SEÑAL EN VIVO</span>
+    </div>
+  </div>
+
+  <div id="search-bar">
+    <input type="text" id="search" class="search-input" placeholder="Buscar canal…" aria-label="Buscar canal" autocomplete="off">
+  </div>
+
+  <main id="channels-grid"><p class="loading-text">Cargando canales…</p></main>
+
+  <footer>Donatelos TV © 2026. Todos los derechos reservados.</footer>
+
+  <nav class="bottom-nav" aria-label="Navegación">
+    <button data-view="home" class="active"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9H4z"/></svg>Inicio</button>
+    <button data-view="live"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/></svg>En vivo</button>
+    <button data-view="search"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Buscar</button>
+    <button data-view="mylist"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h12v17l-6-4-6 4z"/></svg>Mi lista</button>
+  </nav>
+
+  <!-- Reproductor -->
+  <div id="player-view" role="dialog" aria-label="Reproductor">
+    <div class="pv-top">
+      <button id="pv-close" class="btn" type="button">← Volver</button>
+      <h2 id="current-channel-title">Reproductor</h2>
+      <span class="chip">EN VIVO</span>
+      <button id="pv-add" class="btn" type="button">+ Mi lista</button>
+      <button id="btn-share" class="btn" type="button">Compartir</button>
+    </div>
+    <div class="pv-body">
+      <div class="hero-player" id="player-wrapper">
+        <video id="video" controls playsinline webkit-playsinline></video>
+      </div>
+      <div class="pv-controls">
+        <button class="btn" onclick="togglePip()">Mini reproductor</button>
+        <button class="btn" onclick="toggleFullScreen()">Pantalla completa</button>
+        <button class="btn" id="mute-btn" onclick="toggleMute()">Sonido</button>
+      </div>
+      <section class="sec pv-more"><h2>Más canales</h2><div class="row" id="player-more"></div></section>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js?v=4"></script>
+  <script>
+    // Evita que el Smart TV apague la app por inactividad
+    setInterval(() => {
+      document.dispatchEvent(new MouseEvent('mousemove', { view: window, bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
+    }, 120000);
+
+    // Detección de Smart TV (o forzar con ?tv=1 ; quitar con ?tv=0)
+    (function () {
+      let force = false;
+      try {
+        const q = new URLSearchParams(location.search).get('tv');
+        if (q === '1') localStorage.setItem('donatelos_tv', '1');
+        else if (q === '0') localStorage.removeItem('donatelos_tv');
+        force = localStorage.getItem('donatelos_tv') === '1';
+      } catch (e) {}
+      const ua = navigator.userAgent.toLowerCase();
+      const tvUA = ['smarttv','googletv','hbbtv','netcast','tizen','web0s','webos','appletv','crkey','aftb','bravia'].some(k => ua.includes(k)) || /\btv\b/.test(ua);
+      const isTV = tvUA || force;
+      const html = document.documentElement;
+      if (isTV) {
+        html.classList.add('tv');
+        const scale = () => { const z = Math.max(1, Math.min(1.8, window.innerWidth / 1280)); html.style.zoom = z; html.style.setProperty('--z', z); };
+        scale(); window.addEventListener('resize', scale);
+        const pw = document.getElementById('player-wrapper');
+        if (pw) pw.classList.add('is-tv');
+      }
+    })();
+  </script>
+</body>
+</html>
