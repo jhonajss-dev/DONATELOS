@@ -1,95 +1,143 @@
+const puppeteer = require('puppeteer');
 const { createClient } = require('@supabase/supabase-js');
 
-// 1. Configuración de Supabase
 const SUPABASE_URL = "https://vkmpazwqyfxhdrwvqirv.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrbXBhendxeWZ4aGRyd3ZxaXJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxOTMwNjYsImV4cCI6MjEwNzc2OTA2Nn0.rLf9KOY05NAj8R9vhRWge2B1G0lWdOTF8N17UaiaVJk";
 
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-async function procesarAgendaDiaria() {
-  const fechaHoyIso = new Date().toISOString().split('T')[0];
-  const fechaHoyEspn = fechaHoyIso.replace(/-/g, '');
+async function probarPrimerCanal() {
+  console.log("⚡ MODO PRUEBA RÁPIDA: Extrayendo solo el primer canal por partido...");
   
-  console.log(`⚽ Obteniendo partidos del día (${fechaHoyIso}) desde API Gratuita de ESPN...`);
+  const browser = await puppeteer.launch({ 
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
+  
+  const page = await browser.newPage();
+  await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
   try {
-    const urlEspn = `https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard?dates=${fechaHoyEspn}`;
-    const response = await fetch(urlEspn);
+    await page.goto('https://tudeporte.lat/agenda.php', { waitUntil: 'networkidle2', timeout: 60000 });
+    await new Promise(r => setTimeout(r, 2000));
 
-    if (!response.ok) {
-      throw new Error(`Error en respuesta de ESPN: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const events = data.events || [];
-
-    if (events.length === 0) {
-      console.log("ℹ️ No se encontraron partidos programados en la API para el día de hoy.");
-      return;
-    }
-
-    let partidosDelDia = [];
-
-    events.forEach(event => {
-      const competition = event.competitions && event.competitions[0];
-      if (!competition) return;
-
-      const competitors = competition.competitors || [];
-      const home = competitors.find(c => c.homeAway === 'home') || competitors[0];
-      const away = competitors.find(c => c.homeAway === 'away') || competitors[1];
-
-      if (!home || !away) return;
-
-      const homeTeam = home.team.displayName || home.team.name;
-      const awayTeam = away.team.displayName || away.team.name;
-      const homeLogo = home.team.logo || "https://via.placeholder.com/24";
-      const awayLogo = away.team.logo || "https://via.placeholder.com/24";
-
-      let matchTime = "Por confirmar";
-      if (event.date) {
-        const dateObj = new Date(event.date);
-        matchTime = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      }
-
-      // Se incluyen los campos de texto con valores vacíos por compatibilidad con la tabla
-      partidosDelDia.push({
-        home_team: homeTeam,
-        home_logo: homeLogo,
-        away_team: awayTeam,
-        away_logo: awayLogo,
-        match_time: matchTime,
-        channel_name: "", 
-        stream_url: ""
+    // Obtener elementos con "vs"
+    const partidosInfo = await page.evaluate(() => {
+      const resultados = [];
+      const elementos = document.querySelectorAll('a');
+      elementos.forEach((el, index) => {
+        const texto = el.innerText ? el.innerText.trim() : '';
+        if (texto.toLowerCase().includes('vs')) {
+          resultados.push({ index, texto: texto.replace(/\n/g, ' ') });
+        }
       });
+      return resultados;
     });
 
-    console.log(`📊 Partidos extraídos para hoy: ${partidosDelDia.length}`);
-
-    // Paso 1: Limpiar la cartelera anterior en Supabase
-    const { error: deleteError } = await db
-      .from('partidos_cartelera')
-      .delete()
-      .neq('id', 0);
-
-    if (deleteError) {
-      console.error("❌ Error al vaciar cartelera anterior:", deleteError.message);
+    if (partidosInfo.length === 0) {
+      console.log("⚠️ No se encontraron partidos en la web.");
+      await browser.close();
       return;
     }
 
-    // Paso 2: Inserción masiva compatible con la tabla
-    const { error: insertError } = await db
-      .from('partidos_cartelera')
-      .insert(partidosDelDia);
+    // Mapear partidos únicos
+    const unicosMap = new Map();
+    partidosInfo.forEach(p => {
+      if (!unicosMap.has(p.texto)) {
+        unicosMap.set(p.texto, p.index);
+      }
+    });
 
-    if (insertError) {
-      console.error("❌ Error al insertar en Supabase:", insertError.message);
-    } else {
-      console.log(`✅ ¡Agenda de hoy (${fechaHoyIso}) guardada exitosamente con ${partidosDelDia.length} partidos!`);
+    console.log(`🏟️ Encontrados ${unicosMap.size} partidos. Analizando solo el Opción 1 de cada uno...`);
+    const partidosParaGuardar = [];
+    const subPage = await browser.newPage();
+    await subPage.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+    for (let [texto, domIndex] of unicosMap.entries()) {
+      try {
+        await page.goto('https://tudeporte.lat/agenda.php', { waitUntil: 'domcontentloaded', timeout: 20000 });
+        
+        // Clic en el partido
+        await page.evaluate((idx) => {
+          const els = document.querySelectorAll('a');
+          if (els[idx]) els[idx].click();
+        }, domIndex);
+
+        await new Promise(r => setTimeout(r, 1500));
+
+        // Obtener canales desplegados
+        const channelLinks = await page.evaluate(() => {
+          const links = [];
+          document.querySelectorAll('a').forEach(a => {
+            const href = a.href || '';
+            const text = a.innerText ? a.innerText.trim().replace(/\n/g, ' ') : '';
+            if (href && !href.includes('agenda.php') && !href.includes('#') && text.length > 0) {
+              links.push({ name: text, url: href });
+            }
+          });
+          return links;
+        });
+
+        const partes = texto.split(/ vs /i);
+        const homeTeam = partes[0] ? partes[0].replace(/.*:/, '').trim() : texto;
+        const awayTeam = partes[1] ? partes[1].trim() : '';
+
+        if (channelLinks.length === 0) {
+          partidosParaGuardar.push({
+            home_team: homeTeam.substring(0, 50),
+            home_logo: "https://via.placeholder.com/24",
+            away_team: awayTeam.substring(0, 50),
+            away_logo: "https://via.placeholder.com/24",
+            match_time: "En Vivo",
+            channel_name: "Principal",
+            stream_url: page.url()
+          });
+        } else {
+          // SOLO TOMAMOS EL PRIMER CANAL (channelLinks[0])
+          const ch = channelLinks[0];
+          let finalStream = ch.url;
+
+          try {
+            await subPage.goto(ch.url, { waitUntil: 'domcontentloaded', timeout: 8000 });
+            await new Promise(r => setTimeout(r, 1000));
+            
+            const iframeSrc = await subPage.evaluate(() => {
+              const iframe = document.querySelector('iframe');
+              return iframe ? iframe.src : null;
+            });
+            if (iframeSrc) finalStream = iframeSrc;
+          } catch (e) {}
+
+          console.log(`▶️ [${homeTeam} vs ${awayTeam}] -> ${ch.name}: ${finalStream}`);
+
+          partidosParaGuardar.push({
+            home_team: homeTeam.substring(0, 50),
+            home_logo: "https://via.placeholder.com/24",
+            away_team: awayTeam.substring(0, 50),
+            away_logo: "https://via.placeholder.com/24",
+            match_time: "En Vivo",
+            channel_name: ch.name.substring(0, 40),
+            stream_url: finalStream
+          });
+        }
+      } catch (err) {
+        console.log(`⚠️ Error procesando partido: ${texto}`);
+      }
     }
 
-  } catch (err) {
-    console.error("❌ Error durante la extracción diaria:", err);
+    await subPage.close();
+
+    if (partidosParaGuardar.length > 0) {
+      await db.from('partidos_cartelera').delete().neq('id', 0);
+      await db.from('partidos_cartelera').insert(partidosParaGuardar);
+      console.log(`\n✅ Pruebas guardadas en Supabase (${partidosParaGuardar.length} registros).`);
+    }
+
+  } catch (error) {
+    console.error("❌ Error en el scraper:", error);
+  } finally {
+    await browser.close();
   }
 }
 
-procesarAgendaDiaria();
+probarPrimerCanal();
