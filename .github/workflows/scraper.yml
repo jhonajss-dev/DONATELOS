@@ -18,7 +18,9 @@ jobs:
           node-version: '20'
 
       - name: Instalar dependencias
-        run: npm install
+        run: |
+          npm install
+          npm install puppeteer
 
       - name: Ejecutar Scraper
         run: node scraper.js
