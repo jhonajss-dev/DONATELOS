@@ -31,7 +31,7 @@ jobs:
             libxdamage1 \
             libxrandr2 \
             libgbm1 \
-            libasound2
+            libasound2t64
 
       - name: Instalar dependencias de Node
         run: npm install puppeteer @supabase/supabase-js
