@@ -3,7 +3,7 @@ name: Automatizar Scraper de Partidos
 on:
   schedule:
     - cron: '0 * * * *' # Se ejecuta automáticamente cada hora
-  workflow_dispatch: # Permite lanzarlo manualmente desde la pestaña Actions de GitHub
+  workflow_dispatch: # Permite lanzarlo manualmente desde la pestaña Actions
 
 jobs:
   run-scraper:
@@ -17,7 +17,23 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Instalar dependencias (Puppeteer y Supabase)
+      - name: Instalar dependencias del sistema para Puppeteer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libnss3 \
+            libatk1.0-0 \
+            libatk-bridge2.0-0 \
+            libcups2 \
+            libdrm2 \
+            libxkbcommon0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxrandr2 \
+            libgbm1 \
+            libasound2
+
+      - name: Instalar dependencias de Node
         run: npm install puppeteer @supabase/supabase-js
 
       - name: Ejecutar script
