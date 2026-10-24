@@ -34,8 +34,8 @@ jobs:
             libgbm1 \
             libasound2t64
 
-          - name: 📦 Instalar dependencias de Node
-            run: npm install puppeteer @supabase/supabase-js
+      - name: 📦 Instalar dependencias de Node
+        run: npm install puppeteer @supabase/supabase-js
 
-          - name: 🚀 Ejecutar script scraper
-            run: node scraper.js
+      - name: 🚀 Ejecutar script scraper
+        run: node scraper.js
