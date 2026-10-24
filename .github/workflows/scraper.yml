@@ -1,7 +1,9 @@
 name: Actualizar Canales
 
 on:
-  workflow_dispatch: # Permite activarlo manualmente con un botón
+  workflow_dispatch: # Sigue permitiendo ejecutarlo manualmente desde el iPhone
+  schedule:
+    - cron: '*/30 * * * *' # Se ejecuta automáticamente cada 30 minutos
 
 jobs:
   run-scraper:
