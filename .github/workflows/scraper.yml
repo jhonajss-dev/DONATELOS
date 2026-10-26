@@ -20,5 +20,8 @@ jobs:
       - name: Instalar dependencias
         run: npm install
 
-      - name: Ejecutar Scraper
+      - name: Ejecutar Scraper 1
         run: node scraper.js
+
+      - name: Ejecutar Scraper 2
+        run: node scraper2.js
